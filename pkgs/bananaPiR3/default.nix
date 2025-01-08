@@ -1,21 +1,20 @@
-{
-  armTrustedFirmwareTools,
-  buildArmTrustedFirmware,
-  buildSBCUBoot,
-  dtc,
-  fetchFromGitHub,
-  lib,
-  linuxKernel,
-  linux_6_11,
-  ncurses,
-  pkg-config,
-  ubootTools,
-  ...
+{ armTrustedFirmwareTools
+, buildArmTrustedFirmware
+, buildSBCUBoot
+, dtc
+, fetchFromGitHub
+, lib
+, linuxKernel
+, linux_6_11
+, ncurses
+, pkg-config
+, ubootTools
+, ...
 }: rec {
   ubootBananaPiR3 = buildSBCUBoot {
     defconfig = "mt7986a_bpir3_sd_defconfig";
-    extraMeta.platforms = ["aarch64-linux"];
-    extraNativeBuildInputs = [pkg-config ncurses armTrustedFirmwareTools];
+    extraMeta.platforms = [ "aarch64-linux" ];
+    extraNativeBuildInputs = [ pkg-config ncurses armTrustedFirmwareTools ];
     extraPatches = [
       ./mt7986-persistent-mac-from-cpu-uid.patch
       ./mt7986-persistent-wlan-mac-from-cpu-uid.patch
@@ -46,17 +45,16 @@
       cp ${armTrustedFirmwareMT7986}/bl2.img bl2.img
     '';
     # FIXME: Should bl2 bundle here?
-    filesToInstall = ["bl2.img" "fip.bin"];
+    filesToInstall = [ "bl2.img" "fip.bin" ];
   };
 
   armTrustedFirmwareMT7986 =
     (buildArmTrustedFirmware rec {
-      extraMakeFlags = ["USE_MKIMAGE=1" "DRAM_USE_DDR4=1" "BOOT_DEVICE=sdmmc" "bl2" "bl31"];
+      extraMakeFlags = [ "USE_MKIMAGE=1" "DRAM_USE_DDR4=1" "BOOT_DEVICE=sdmmc" "bl2" "bl31" ];
       platform = "mt7986";
-      extraMeta.platforms = ["aarch64-linux"];
-      filesToInstall = ["build/${platform}/release/bl2.img" "build/${platform}/release/bl31.bin"];
-    })
-    .overrideAttrs (oldAttrs: {
+      extraMeta.platforms = [ "aarch64-linux" ];
+      filesToInstall = [ "build/${platform}/release/bl2.img" "build/${platform}/release/bl31.bin" ];
+    }).overrideAttrs (oldAttrs: {
       src = fetchFromGitHub {
         owner = "mtk-openwrt";
         repo = "arm-trusted-firmware";
@@ -65,7 +63,7 @@
         hash = "sha256-OjM+metlaEzV7mXA8QHYEQd94p8zK34dLTqbyWQh1bQ=";
       };
       version = "2.7.0-mtk";
-      nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [dtc ubootTools];
+      nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [ dtc ubootTools ];
     });
 
   linuxPackages_6_11_bananaPiR3 = linuxKernel.packagesFor (linux_6_11.override {
@@ -102,6 +100,8 @@
       DRM = lib.mkForce no;
       SOUND = no;
       INFINIBAND = lib.mkForce no;
+
+      CONFIG_DEBUG_INFO_BTF = no;
 
       # PCIe
       PCIE_MEDIATEK = yes;
@@ -148,10 +148,10 @@
   });
 
   /*
-  This kernel is minimal in comparison to the "autoModules = true" default kernel.
-  If it is missing something that makes it not usable to you on your device, please
-  request its addition.  Even if it has been explicitly disabled below it is likely
-  there won't be an issue re-enabling it.
+    This kernel is minimal in comparison to the "autoModules = true" default kernel.
+    If it is missing something that makes it not usable to you on your device, please
+    request its addition.  Even if it has been explicitly disabled below it is likely
+    there won't be an issue re-enabling it.
   */
   linuxPackages_6_11_bananaPiR3_minimal = linuxKernel.packagesFor (linuxPackages_6_11_bananaPiR3.kernel.override {
     autoModules = false;
