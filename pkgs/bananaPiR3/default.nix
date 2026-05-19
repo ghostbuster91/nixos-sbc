@@ -233,7 +233,7 @@ in rec {
         XEN_DOM0 = lib.mkForce no;
 
         VIRT_DRIVERS = lib.mkForce no;
-        STAGING_MEDIA = no;
+        STAGING_MEDIA = lib.mkForce no;
         CHROME_PLATFORMS = lib.mkForce no;
         COMMON_CLK_RK808 = no;
         COMMON_CLK_SCMI = no;
