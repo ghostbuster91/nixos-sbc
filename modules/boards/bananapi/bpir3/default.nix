@@ -82,7 +82,37 @@ in {
       }
     ];
 
-    boot.initrd.preDeviceCommands = lib.mkIf cfg.pcieFixup ''
+    # Cold-boot PCIe rescan: if the device (e.g. an NVMe) didn't appear, remove
+    # the PCI bridge and rescan so it comes back. Implemented for both stage-1
+    # flavours. systemd stage 1 (NixOS default since 26.05) rejects
+    # `preDeviceCommands`, so there we express it as an early oneshot ordered
+    # before udev coldplug and the root-device target. The ordering may need a
+    # hardware boot test on NVMe-root setups.
+    boot.initrd.systemd.services.bpir3-pcie-rescan = lib.mkIf (cfg.pcieFixup && config.boot.initrd.systemd.enable) {
+      description = "Rescan PCIe bus to recover BPi-R3 cold-boot device";
+      wantedBy = ["initrd-root-device.target"];
+      after = ["systemd-udevd.service"];
+      before = ["systemd-udev-trigger.service" "initrd-root-device.target"];
+      unitConfig.DefaultDependencies = false;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        if [ ! -d /sys/bus/pci/devices/0000:01:00.0 ]; then
+          if [ -d /sys/bus/pci/devices/0000:00:00.0 ]; then
+            # Remove PCI bridge, then rescan.  NVMe init crashes if PCI bridge not removed first
+            echo 1 > /sys/bus/pci/devices/0000:00:00.0/remove
+            # Rescan brings PCI root back and brings the NVMe device in.
+            echo 1 > /sys/bus/pci/rescan
+          else
+            echo "PCIe bridge missing" >&2
+          fi
+        fi
+      '';
+    };
+
+    boot.initrd.preDeviceCommands = lib.mkIf (cfg.pcieFixup && !config.boot.initrd.systemd.enable) ''
       if [ ! -d /sys/bus/pci/devices/0000:01:00.0 ]; then
         if [ -d /sys/bus/pci/devices/0000:00:00.0 ]; then
           # Remove PCI bridge, then rescan.  NVMe init crashes if PCI bridge not removed first
